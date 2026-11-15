@@ -13,7 +13,9 @@ cp server/.env.example server/.env
 npm run dev
 ```
 
-打开终端显示的 Vite 地址（通常是 http://localhost:5173）。学生入口 `/student`，教师入口 `/teacher`。开发代理默认连接后端 3000 端口；更改后端端口时同步修改 `client/vite.config.js`。
+打开终端显示的 Vite 地址（通常是 http://localhost:5173）。学生入口 `/student`，教师入口 `/teacher`。`npm run dev` 读取 `server/.env`，开发代理自动跟随其中的 `PORT`（默认 3000），已有环境变量优先。未设置教师密码时，开发命令会提示配置步骤并退出。
+
+如果页面提示“服务器未返回有效数据”，请检查终端中的后端启动错误，并确认看到“服务已启动”日志。修改 `.env` 后停止并重新运行 `npm run dev`。
 
 教师登录后点“开始第一轮”，学生输入学号姓名完成实训。学生草稿只存本机浏览器，评分由服务端计算。教师可查看详情、删除提交、导出 CSV，并编辑下一轮实验数据。
 

@@ -18,7 +18,17 @@ async function request(path, options) {
   } catch {
     throw Object.assign(new Error('无法连接服务器，请检查网络后重试。'), { code: 'NETWORK' })
   }
-  const data = await response.json()
+  let data
+  try {
+    data = await response.json()
+  } catch {
+    throw Object.assign(new Error('服务器未返回有效数据，请确认后端已启动后重试。'), {
+      code: response.status >= 500 ? 'NETWORK' : 'INVALID_RESPONSE', status: response.status,
+    })
+  }
+  if (!data || typeof data !== 'object') {
+    throw Object.assign(new Error('服务器返回的数据格式错误，请刷新页面后重试。'), { code: 'INVALID_RESPONSE', status: response.status })
+  }
   if (!response.ok) throw Object.assign(new Error(data.error?.message || '请求失败，请重试。'), { code: data.error?.code, status: response.status })
   return data
 }

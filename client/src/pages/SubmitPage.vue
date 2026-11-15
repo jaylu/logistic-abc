@@ -29,7 +29,7 @@ async function submit() {
     persist()
   } catch (e) {
     if (e.code === 'SESSION_EXPIRED') state.expired = true
-    error.value = e.code === 'NETWORK' ? '提交未成功，你的答案仍保存在本机。请检查网络后重试。' : e.code === 'ALREADY_SUBMITTED' ? '你在本轮已经提交过。如需重做，请老师在后台删除你的提交后点击“换人”重新开始。' : e.message
+    error.value = e.code === 'NETWORK' ? '提交未成功，你的答案仍保存在本机。请检查网络后重试。' : e.code === 'ALREADY_SUBMITTED' ? '你在本轮已经提交过。如需重做，请联系老师。' : e.message
   } finally { submitting.value = false; confirming.value = false }
 }
 async function copy() { try { await navigator.clipboard.writeText(state.draft.reflection); notify('已复制你的反思。') } catch { error.value = '无法自动复制，请选中反思文字后手动复制。' } }
