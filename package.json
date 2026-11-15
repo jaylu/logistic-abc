@@ -1,0 +1,19 @@
+{
+  "name": "logistic-abc",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "build": "node scripts/build.js",
+    "test": "node --test server/test/*.test.js client/test/*.test.js",
+    "test:release": "node scripts/smoke-release.js"
+  }
+}

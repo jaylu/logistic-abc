@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "name": "电商小件仓（默认场景）",
+  "description": "某电商仓库存放 12 种数码商品。高价商品销售额大但拣货不多，手机壳、数据线等配件销售额小但拣货非常频繁。",
+  "thresholds": { "a": 0.8, "b": 0.95 },
+  "abcCheckLimit": 3,
+  "fullScoreImprovement": 0.3,
+  "cellSizeMeters": 5,
+  "map": [
+    "#SSSSSS",
+    "E......",
+    "#SSSSSS"
+  ],
+  "products": [
+    { "sku": "P01", "name": "笔记本电脑", "monthlySalesQty": 40,  "unitPrice": 4500, "pickFrequency": 30 },
+    { "sku": "P02", "name": "智能手机",   "monthlySalesQty": 60,  "unitPrice": 2800, "pickFrequency": 120 },
+    { "sku": "P03", "name": "平板电脑",   "monthlySalesQty": 30,  "unitPrice": 2200, "pickFrequency": 25 },
+    { "sku": "P04", "name": "蓝牙耳机",   "monthlySalesQty": 300, "unitPrice": 150,  "pickFrequency": 240 },
+    { "sku": "P05", "name": "智能手表",   "monthlySalesQty": 40,  "unitPrice": 900,  "pickFrequency": 35 },
+    { "sku": "P06", "name": "移动电源",   "monthlySalesQty": 250, "unitPrice": 99,   "pickFrequency": 200 },
+    { "sku": "P07", "name": "机械键盘",   "monthlySalesQty": 60,  "unitPrice": 260,  "pickFrequency": 45 },
+    { "sku": "P08", "name": "无线鼠标",   "monthlySalesQty": 200, "unitPrice": 69,   "pickFrequency": 170 },
+    { "sku": "P09", "name": "手机壳",     "monthlySalesQty": 800, "unitPrice": 15,   "pickFrequency": 420 },
+    { "sku": "P10", "name": "数据线",     "monthlySalesQty": 600, "unitPrice": 12,   "pickFrequency": 360 },
+    { "sku": "P11", "name": "屏幕贴膜",   "monthlySalesQty": 500, "unitPrice": 10,   "pickFrequency": 300 },
+    { "sku": "P12", "name": "电脑包",     "monthlySalesQty": 50,  "unitPrice": 120,  "pickFrequency": 40 }
+  ],
+  "baselinePlacement": {
+    "P01": "R1-S1", "P03": "R2-S1",
+    "P12": "R1-S2", "P07": "R2-S2",
+    "P05": "R1-S3", "P02": "R2-S3",
+    "P08": "R1-S4", "P04": "R2-S4",
+    "P06": "R1-S5", "P11": "R2-S5",
+    "P10": "R1-S6", "P09": "R2-S6"
+  }
+}

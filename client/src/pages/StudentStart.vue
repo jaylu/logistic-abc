@@ -1,0 +1,8 @@
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { state, startStudent, checkRound } from '../state.js'
+const router = useRouter(), studentId = ref(state.draft?.studentId || ''), studentName = ref(state.draft?.studentName || ''), error = ref('')
+async function start() { error.value = ''; if (!await checkRound()) return; try { startStudent(studentId.value, studentName.value); router.push(`/student/${state.draft.submissionResult ? 'submit' : state.draft.step === 'start' ? 'abc' : state.draft.step}`) } catch (e) { error.value = e.message } }
+</script>
+<template><div class="start-grid"><section class="intro"><p class="eyebrow">仓储管理 · 课堂实训</p><h1>让每一次拣货<br>少走一点路。</h1><p>{{ state.round?.scenario.description || '某电商仓库商品多、拣货路线长。现在，你来担任仓库管理员。' }}</p><p>按销售额完成 ABC 分类，再用拣货数据安排储位，比较你的优化效果。</p><div class="task-strip"><span>01 分类</span><span>02 摆放</span><span>03 分析与提交</span></div><p>分类 50 分 + 布局 40 分 + 反思 10 分</p><p class="muted">预计用时 30 分钟</p></section><form class="card start-form" @submit.prevent="start"><h2>开始你的实训</h2><p class="muted">当前轮次：{{ state.round ? '#' + state.round.id.slice(0,6) : '尚未开始' }}</p><label>学号 *<input v-model="studentId" required maxlength="32" pattern="[A-Za-z0-9_-]+" autocomplete="username" placeholder="例如 20260101"></label><label>姓名 *<input v-model="studentName" required autocomplete="name" placeholder="输入你的姓名"></label><p v-if="error" class="error" role="alert">✕ {{ error }}</p><button class="primary" :disabled="!state.round || !!state.error || state.expired">开始实训 →</button><button v-if="!state.round" type="button" @click="checkRound">重新检查</button><p class="muted small">草稿只保存在这台电脑。换电脑或清理浏览器会丢失未提交内容，请不要同时打开多个标签页。</p></form></div></template>
