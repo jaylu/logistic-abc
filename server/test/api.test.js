@@ -54,7 +54,7 @@ function answerFor(round, overrides = {}) {
     studentName: '张三',
     abcAnswers: classifyAbc(scenario.products, scenario.thresholds).classes,
     placement: { ...scenario.baselinePlacement },
-    reflection: '因为拣货频次高的商品应该放在离出库口更近的位置，这样往返距离最短。',
+    reflection: '因为周转量高的商品应该放在离出库口更近的位置，这样往返距离最短。',
     ...overrides,
   }
 }
@@ -123,7 +123,7 @@ test('教师详情、删除后可重新提交、CSV 防注入', async () => {
   const round = (await call('GET', '/round')).data
   const list = (await call('GET', '/teacher/submissions')).data
   const detail = await call('GET', `/teacher/submissions/${list[0].id}`)
-  assert.equal(detail.data.correctClasses.P01, 'A')
+  assert.equal(detail.data.correctClasses.P01, 'C')
 
   assert.equal((await call('DELETE', `/teacher/submissions/${list[0].id}`)).status, 200)
   const redo = await call('POST', '/submissions', answerFor(round, { reflection: '=HYPERLINK("x") 重新提交' }))

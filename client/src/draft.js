@@ -15,5 +15,5 @@ export function clearDraft(storage = localStorage) {
   try { storage.removeItem(DRAFT_KEY); return true } catch { return false }
 }
 export function newDraft(round, studentId, studentName) {
-  return { schemaVersion: 1, sessionId: round.id, studentId, studentName, step: 'abc', abcGuideDone: false, abcAnswers: {}, abcChecksUsed: 0, placement: { ...round.scenario.baselinePlacement }, reflection: '', submissionResult: null }
+  return { schemaVersion: 1, sessionId: round.id, studentId, studentName, step: 'abc', abcGuideDone: false, abcCalculations: {}, abcSort: null, abcAnswers: {}, abcChecksUsed: 0, placement: { ...round.scenario.baselinePlacement }, reflection: '', submissionResult: null }
 }

@@ -19,9 +19,11 @@ export function validateScenario(s) {
     errors.push('description（场景说明）最多 300 字')
   }
 
-  const t = s.thresholds
-  if (!t || typeof t.a !== 'number' || typeof t.b !== 'number' || !(t.a > 0 && t.a < t.b && t.b < 1)) {
-    errors.push('thresholds 必须满足 0 < a < b < 1')
+  for (const [factor, label] of [['turnover', '周转量'], ['itemCount', '品项数']]) {
+    const t = s.thresholds?.[factor]
+    if (!t || typeof t.a !== 'number' || typeof t.b !== 'number' || !(t.a > 0 && t.a < t.b && t.b < 1)) {
+      errors.push(`${label}累计占比阈值必须满足 0 < a < b < 1，C 自动补全至 100%`)
+    }
   }
   if (!isInt(s.abcCheckLimit) || s.abcCheckLimit < 0 || s.abcCheckLimit > 10) errors.push('abcCheckLimit 必须是 0～10 的整数')
   if (typeof s.fullScoreImprovement !== 'number' || !(s.fullScoreImprovement > 0 && s.fullScoreImprovement <= 1)) {
@@ -61,11 +63,7 @@ export function validateScenario(s) {
       else skus.add(p.sku)
       const name = p.sku ?? label
       if (!isText(p.name, 20)) errors.push(`${name} 的名称必填，最多 20 字`)
-      if (!isInt(p.monthlySalesQty) || p.monthlySalesQty <= 0) errors.push(`${name} 的月销量必须是正整数`)
-      if (typeof p.unitPrice !== 'number' || !Number.isFinite(p.unitPrice) || !(p.unitPrice > 0) || Math.abs(p.unitPrice * 100 - Math.round(p.unitPrice * 100)) > 1e-6) {
-        errors.push(`${name} 的单价必须大于 0，最多 2 位小数`)
-      }
-      if (!isInt(p.pickFrequency) || p.pickFrequency <= 0) errors.push(`${name} 的拣货频次必须是正整数`)
+      if (!isInt(p.turnover) || p.turnover <= 0) errors.push(`${name} 的周转量必须是安全范围内的正整数`)
     })
     if (slotIds && slotIds.size < products.length) errors.push(`储位数（${slotIds.size}）少于商品数（${products.length}）`)
   }
@@ -78,17 +76,17 @@ export function validateScenario(s) {
   }
 
   if (errors.length === 0) {
-    const total = products.reduce((sum, p) => sum + p.monthlySalesQty * Math.round(p.unitPrice * 100), 0)
-    if (!Number.isSafeInteger(total) || total <= 0) errors.push('总销售额必须大于 0，且整数分金额不能超过安全计算范围')
+    const total = products.reduce((sum, p) => sum + p.turnover, 0)
+    if (!Number.isSafeInteger(total) || total <= 0) errors.push('总周转量必须大于 0，且不能超过安全计算范围')
     const distances = parseMap(s.map, s.cellSizeMeters).slots.map(slot => slot.distance)
-    const maximumDistance = products.reduce((sum, p) => sum + p.pickFrequency * 2 * Math.max(...distances), 0)
-    if (!Number.isFinite(maximumDistance) || maximumDistance > Number.MAX_SAFE_INTEGER) errors.push('拣货距离超过安全计算范围，请减小拣货频次或地图尺寸')
+    const maximumDistance = products.reduce((sum, p) => sum + p.turnover * 2 * Math.max(...distances), 0)
+    if (!Number.isFinite(maximumDistance) || maximumDistance > Number.MAX_SAFE_INTEGER) errors.push('拣货距离超过安全计算范围，请减小周转量或地图尺寸')
   }
   if (errors.length === 0) {
     const ref = referenceMetrics(s)
     if (ref.bestImprovement < s.fullScoreImprovement) {
       errors.push(
-        `按拣货频次摆放最多只能改善 ${(ref.bestImprovement * 100).toFixed(1)}%，低于满分改善率 ${(s.fullScoreImprovement * 100).toFixed(1)}%，学生无法拿到布局满分`,
+        `按周转量摆放最多只能改善 ${(ref.bestImprovement * 100).toFixed(1)}%，低于满分改善率 ${(s.fullScoreImprovement * 100).toFixed(1)}%，学生无法拿到布局满分`,
       )
     }
   }
@@ -119,7 +117,7 @@ export function normalizeScenario(s) {
     schemaVersion: 1,
     name: s.name.trim(),
     description: (s.description ?? '').trim(),
-    thresholds: { a: s.thresholds.a, b: s.thresholds.b },
+    thresholds: Object.fromEntries(['turnover', 'itemCount'].map(key => [key, { a: s.thresholds[key].a, b: s.thresholds[key].b }])),
     abcCheckLimit: s.abcCheckLimit,
     fullScoreImprovement: s.fullScoreImprovement,
     cellSizeMeters: s.cellSizeMeters,
@@ -127,9 +125,7 @@ export function normalizeScenario(s) {
     products: s.products.map((p) => ({
       sku: p.sku,
       name: p.name.trim(),
-      monthlySalesQty: p.monthlySalesQty,
-      unitPrice: p.unitPrice,
-      pickFrequency: p.pickFrequency,
+      turnover: p.turnover,
     })),
     baselinePlacement: Object.fromEntries(s.products.map((p) => [p.sku, s.baselinePlacement[p.sku]])),
   }

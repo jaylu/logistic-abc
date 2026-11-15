@@ -20,3 +20,6 @@
 .abc-drag-ghost{position:fixed;z-index:40;pointer-events:none;padding:12px 18px;background:var(--card);border:2px solid var(--primary);border-radius:8px;box-shadow:var(--shadow);font-weight:700;max-width:240px}
 @media(max-width:1100px){.abc-workspace{grid-template-columns:minmax(0,1fr) 260px;gap:12px}.abc-workspace th,.abc-workspace td{padding:6px}.abc-product-handle{min-width:105px}}
 @media(max-width:850px){.abc-workspace{grid-template-columns:minmax(0,1fr)}.abc-buckets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.bucket-help,.bucket-status{grid-column:1/-1}.bucket-target{flex-wrap:wrap;gap:4px}.bucket-products{max-height:160px}.abc-workspace .abc-table{max-height:300px}}
+
+.abc-percent-input { width: 100%; min-width: 80px; max-width: 150px; text-align: right; }
+.abc-percent-input[aria-invalid="true"] { border-color: var(--error); }

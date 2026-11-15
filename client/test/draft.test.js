@@ -5,6 +5,7 @@ function storage() { const data = new Map([['other-app', 'keep']]); return { get
 test('草稿恢复、换人只删除本应用数据', () => {
   const s = storage(), draft = newDraft({ id: 'round-1', scenario: { baselinePlacement: { P01: 'R1-S1' } } }, 'S01', '张三')
   draft.reflection = '恢复的反思'; draft.abcChecksUsed = 2
+  draft.abcGuideDone = true; draft.abcSort = 'desc'; draft.abcCalculations = { P01: { turnover: '80%', itemCount: '20%' } }
   assert.equal(saveDraft(draft,s),true); assert.deepEqual(readDraft(s),draft)
   assert.equal(clearDraft(s),true); assert.equal(readDraft(s),null); assert.equal(s.getItem('other-app'),'keep')
 })

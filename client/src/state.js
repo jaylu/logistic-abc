@@ -1,13 +1,14 @@
 import { reactive, computed, watch } from 'vue'
 import { api } from './api.js'
 import { readDraft, saveDraft, clearDraft, newDraft } from './draft.js'
+import { calculationsComplete } from './abc-input.js'
 import { classifyAbc, layoutMetrics, parseMap } from './calc.js'
 
 export const state = reactive({ round: null, draft: null, ready: false, error: '', expired: false, saved: '', toast: '' })
 export const scenario = computed(() => state.round?.scenario)
 export const locked = computed(() => state.expired || !!state.draft?.submissionResult)
 export const classified = computed(() => scenario.value ? classifyAbc(scenario.value.products, scenario.value.thresholds) : null)
-export const complete = computed(() => !!scenario.value && scenario.value.products.every(p => ['A', 'B', 'C'].includes(state.draft?.abcAnswers[p.sku])))
+export const complete = computed(() => !!scenario.value && calculationsComplete(scenario.value.products, state.draft?.abcCalculations) && scenario.value.products.every(p => ['A', 'B', 'C'].includes(state.draft?.abcAnswers[p.sku])))
 export const metrics = computed(() => scenario.value && state.draft ? layoutMetrics(scenario.value, state.draft.placement) : null)
 let toastTimer
 export function notify(message) { state.toast = message; clearTimeout(toastTimer); toastTimer = setTimeout(() => { state.toast = '' }, 4500) }
@@ -21,6 +22,10 @@ export async function checkRound() {
     const round = await api('/round')
     state.error = ''
     if (state.draft && state.draft.sessionId !== round.id) { state.expired = true; return false }
+    if (!round.scenario.thresholds?.turnover || !round.scenario.thresholds?.itemCount) {
+      state.error = '当前轮次使用旧版实验数据，请老师在教师页面开始新一轮。'
+      return false
+    }
     state.round = round
     state.expired = false
     if (!restored) { restored = true; restoreDraft() }

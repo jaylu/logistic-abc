@@ -11,28 +11,29 @@ for (const [side, calc] of [['server', serverCalc], ['client', clientCalc]]) {
   test(`[${side}] 默认场景的 ABC 分类`, () => {
     const { classes } = calc.classifyAbc(scenario.products, scenario.thresholds)
     const group = (cls) => Object.keys(classes).filter((k) => classes[k] === cls).sort()
-    assert.deepEqual(group('A'), ['P01', 'P02', 'P03', 'P04', 'P05'])
-    assert.deepEqual(group('B'), ['P06', 'P07', 'P08', 'P09'])
-    assert.deepEqual(group('C'), ['P10', 'P11', 'P12'])
+    assert.deepEqual(group('A'), ['P09', 'P10'])
+    assert.deepEqual(group('B'), ['P04', 'P06', 'P08', 'P11'])
+    assert.deepEqual(group('C'), ['P01', 'P02', 'P03', 'P05', 'P07', 'P12'])
   })
 
-  test(`[${side}] 同销售额按 SKU 排序，加入前累计恰好等于阈值时归入下一类`, () => {
-    const products = [
-      { sku: 'B', monthlySalesQty: 1, unitPrice: 50, pickFrequency: 1 },
-      { sku: 'A', monthlySalesQty: 1, unitPrice: 50, pickFrequency: 1 },
-      { sku: 'C', monthlySalesQty: 1, unitPrice: 0.01, pickFrequency: 1 },
-    ]
-    // 总额 10001 分：A 前 0 → A；B 前 5000/10001 < 0.5 → A；C 前 10000/10001 ≥ 0.9 → C
-    const { rows, classes } = calc.classifyAbc(products, { a: 0.5, b: 0.9 })
-    assert.deepEqual(rows.map((r) => r.sku), ['A', 'B', 'C'])
-    assert.deepEqual(classes, { A: 'A', B: 'A', C: 'C' })
+  test(`[${side}] 双因子取较低等级，包含当前商品且边界归前一类`, () => {
+    const products = [{ sku: 'B', turnover: 40 }, { sku: 'A', turnover: 40 }, { sku: 'C', turnover: 15 }, { sku: 'D', turnover: 5 }]
+    const limits = { turnover: { a: 0.8, b: 0.95 }, itemCount: { a: 0.25, b: 0.75 } }
+    const { rows, classes } = calc.classifyAbc(products, limits)
+    assert.deepEqual(rows.map(r => r.sku), ['A', 'B', 'C', 'D'])
+    assert.deepEqual(classes, { A: 'A', B: 'B', C: 'B', D: 'C' })
+    assert.equal(rows[1].cumAfter, 0.8)
+    assert.equal(rows[1].itemCumAfter, 0.5)
+    // 周转量等级低于品项数时，同样取较低等级。
+    assert.equal(calc.classifyAbc(products, { turnover: { a: 0.3, b: 0.7 }, itemCount: { a: 0.5, b: 0.75 } }).classes.A, 'B')
+    const twenty = Array.from({ length: 20 }, (_, i) => ({ sku: String(i).padStart(2, '0'), turnover: 1 }))
+    assert.equal(calc.classifyAbc(twenty, limits).rows[0].itemCumAfter, 0.05)
+  })
 
-    const even = [
-      { sku: 'X', monthlySalesQty: 1, unitPrice: 1, pickFrequency: 1 },
-      { sku: 'Y', monthlySalesQty: 1, unitPrice: 1, pickFrequency: 1 },
-    ]
-    // Y 加入前累计正好 50%，阈值 a = 0.5 → 不小于阈值，归 B
-    assert.deepEqual(calc.classifyAbc(even, { a: 0.5, b: 0.9 }).classes, { X: 'A', Y: 'B' })
+  test(`[${side}] 旧轮次仍按原快照算法计算`, () => {
+    const products = [{ sku: 'A', monthlySalesQty: 1, unitPrice: 1, pickFrequency: 2 }, { sku: 'B', monthlySalesQty: 1, unitPrice: 1, pickFrequency: 3 }]
+    assert.deepEqual(calc.classifyAbc(products, { a: 0.5, b: 0.95 }).classes, { A: 'A', B: 'B' })
+    assert.equal(calc.pickDistance({ A: 'S1', B: 'S2' }, products, { S1: 5, S2: 10 }), 80)
   })
 
   test(`[${side}] 地图解析与 BFS 距离`, () => {
@@ -51,13 +52,12 @@ for (const [side, calc] of [['server', serverCalc], ['client', clientCalc]]) {
     assert.match(blocked.errors.join(), /无法从出库口到达/)
   })
 
-  test(`[${side}] 自定义阈值保留超过四位小数的精度`, () => {
-    const products = [
-      { sku: 'A', monthlySalesQty: 1, unitPrice: 1 },
-      { sku: 'B', monthlySalesQty: 1, unitPrice: 1 },
-    ]
-    assert.equal(calc.classifyAbc(products, { a: 0.50001, b: 0.95 }).classes.B, 'A')
-    assert.equal(calc.classifyAbc(products, { a: 0.5, b: 0.50001 }).classes.B, 'B')
+  test(`[${side}] 自定义阈值不受显示精度影响`, () => {
+    const products = [{ sku: 'A', turnover: 1 }, { sku: 'B', turnover: 1 }]
+    const thresholds = { turnover: { a: 0.49999, b: 0.95 }, itemCount: { a: 0.5, b: 0.95 } }
+    assert.equal(calc.classifyAbc(products, thresholds).classes.A, 'B')
+    thresholds.turnover.a = 0.5
+    assert.equal(calc.classifyAbc(products, thresholds).classes.A, 'A')
   })
 
   test(`[${side}] 拣货距离、改善率与参考指标`, () => {
@@ -66,8 +66,8 @@ for (const [side, calc] of [['server', serverCalc], ['client', clientCalc]]) {
     assert.equal(m.improvement, 0)
     const ref = calc.referenceMetrics(scenario)
     assert.equal(ref.bestImprovement.toFixed(3), '0.544')
-    assert.equal(ref.abcImprovement.toFixed(3), '0.139')
-    assert.deepEqual(ref.classCounts, { A: 5, B: 4, C: 3 })
+    assert.equal(ref.abcImprovement.toFixed(3), '0.544')
+    assert.deepEqual(ref.classCounts, { A: 2, B: 4, C: 6 })
   })
 
   test(`[${side}] 评分规则`, () => {
@@ -76,7 +76,7 @@ for (const [side, calc] of [['server', serverCalc], ['client', clientCalc]]) {
     let r = calc.scoreSubmission(scenario, base)
     assert.deepEqual(r.scores, { abc: 50, layout: 0, reflection: 0, total: 50 })
 
-    const tenOfTwelve = { ...classes, P01: 'B', P02: 'C' }
+    const tenOfTwelve = { ...classes, P09: 'B', P10: 'C' }
     assert.equal(calc.scoreSubmission(scenario, { ...base, abcAnswers: tenOfTwelve }).scores.abc, 41.7)
 
     // 改善率 15% 得 20 分、≥ 30% 得 40 分

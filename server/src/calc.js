@@ -14,10 +14,6 @@ export function countChars(text) {
   return Array.from(String(text ?? '').trim()).length
 }
 
-export function priceCents(unitPrice) {
-  return Math.round(unitPrice * 100)
-}
-
 // 解析字符地图：E 出库口、. 通道、S 储位、# 不可通行。
 // 返回储位列表（含取货点和距离）及发现的问题。
 export function parseMap(map, cellSizeMeters = 1) {
@@ -84,12 +80,44 @@ export function slotDistances(scenario) {
   return Object.fromEntries(slots.map((s) => [s.slotId, s.distance]))
 }
 
-// 按销售额降序（同额按 SKU 升序），用“加入前累计占比”判断分类。
+// 按周转量降序、SKU 升序；两个累计值都包含当前商品，取较低等级。
 export function classifyAbc(products, thresholds) {
+  if (!thresholds.turnover && typeof thresholds.a === 'number') return classifyLegacyAbc(products, thresholds)
+  const rows = products.map(({ sku, name, turnover }) => ({ sku, name, turnover }))
+  rows.sort((x, y) => y.turnover - x.turnover || (x.sku < y.sku ? -1 : x.sku > y.sku ? 1 : 0))
+  const total = rows.reduce((sum, r) => sum + r.turnover, 0)
+  // 用整数分数比较，阈值边界归前一类，不依赖显示舍入。
+  const fraction = (value) => {
+    const [mantissa, exponent = '0'] = String(value).split('e')
+    const digits = (mantissa.split('.')[1] || '').length - Number(exponent)
+    return [BigInt(mantissa.replace('.', '')) * 10n ** BigInt(Math.max(0, -digits)), 10n ** BigInt(Math.max(0, digits))]
+  }
+  const grade = (count, sum, limits) => {
+    for (const [index, key] of ['a', 'b'].entries()) {
+      const [numerator, denominator] = fraction(limits[key])
+      if (BigInt(count) * denominator <= numerator * BigInt(sum)) return index
+    }
+    return 2
+  }
+  const classes = {}
+  let cum = 0
+  rows.forEach((row, index) => {
+    cum += row.turnover
+    row.share = row.turnover / total
+    row.cumAfter = cum / total
+    row.itemCumAfter = (index + 1) / rows.length
+    row.cls = ['A', 'B', 'C'][Math.max(grade(cum, total, thresholds.turnover), grade(index + 1, rows.length, thresholds.itemCount))]
+    classes[row.sku] = row.cls
+  })
+  return { rows, total, classes }
+}
+
+// 仅用于读取已保存的旧轮次，旧快照和评分规则保持不变。
+function classifyLegacyAbc(products, thresholds) {
   const rows = products.map((p) => ({
     sku: p.sku,
     name: p.name,
-    salesCents: p.monthlySalesQty * priceCents(p.unitPrice),
+    salesCents: p.monthlySalesQty * Math.round(p.unitPrice * 100),
   }))
   rows.sort((x, y) => y.salesCents - x.salesCents || (x.sku < y.sku ? -1 : x.sku > y.sku ? 1 : 0))
   const total = rows.reduce((sum, r) => sum + r.salesCents, 0)
@@ -117,7 +145,7 @@ export function classifyAbc(products, thresholds) {
 
 export function pickDistance(placement, products, distances) {
   let sum = 0
-  for (const p of products) sum += 2 * distances[placement[p.sku]] * p.pickFrequency
+  for (const p of products) sum += 2 * distances[placement[p.sku]] * (p.turnover ?? p.pickFrequency)
   return sum
 }
 
@@ -139,13 +167,13 @@ function placeInOrder(scenario, orderedSkus) {
   return Object.fromEntries(orderedSkus.map((sku, i) => [sku, nearest[i].slotId]))
 }
 
-// 供教师参考：按拣货频次摆放（最优）与按 ABC 分类摆放的改善率
+// 供教师参考：按周转量摆放（最优）与按 ABC 分类摆放的改善率
 export function referenceMetrics(scenario) {
   const { classes, rows } = classifyAbc(scenario.products, scenario.thresholds)
   const byFrequency = [...scenario.products]
-    .sort((x, y) => y.pickFrequency - x.pickFrequency || (x.sku < y.sku ? -1 : 1))
+    .sort((x, y) => (y.turnover ?? y.pickFrequency) - (x.turnover ?? x.pickFrequency) || (x.sku < y.sku ? -1 : 1))
     .map((p) => p.sku)
-  const byAbc = rows.map((r) => r.sku) // 已按销售额降序，A 类在前
+  const byAbc = rows.map((r) => r.sku) // 已按周转量降序，A 类在前
   const best = layoutMetrics(scenario, placeInOrder(scenario, byFrequency))
   const abc = layoutMetrics(scenario, placeInOrder(scenario, byAbc))
   const counts = { A: 0, B: 0, C: 0 }
