@@ -82,6 +82,9 @@ export function createAuth(password) {
   }
 }
 
+// 公网代理会重写 Host；仅允许部署域名的精确 Origin（不接受子域名或额外端口）。
+const PUBLIC_ORIGINS = new Set(['http://logistic.jaylu.tech', 'https://logistic.jaylu.tech'])
+
 // 修改类请求要求 Origin 与本站一致（浏览器会自动带 Origin；命令行工具不带则放行）
 export function sameOrigin(req, res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next()
@@ -91,7 +94,7 @@ export function sameOrigin(req, res, next) {
     try {
       expected = new URL(`${req.protocol}://${req.headers.host}`).origin
     } catch {}
-    if (origin !== expected) {
+    if (origin !== expected && !PUBLIC_ORIGINS.has(origin)) {
       return res.status(403).json({ error: { code: 'BAD_ORIGIN', message: '请求来源不被允许' } })
     }
   }

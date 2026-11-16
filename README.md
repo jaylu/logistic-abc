@@ -13,7 +13,7 @@ cp server/.env.example server/.env
 npm run dev
 ```
 
-打开终端显示的 Vite 地址（通常是 http://localhost:5173）。学生入口 `/student`，教师入口 `/teacher`。`npm run dev` 读取 `server/.env`，开发代理自动跟随其中的 `PORT`（默认 3000），已有环境变量优先。未设置教师密码时，开发命令会提示配置步骤并退出。
+打开终端显示的 Vite 地址（通常是 http://localhost:5173）。学生入口 `/student`，教师入口 `/teacher`。`npm run dev` 读取 `server/.env`，开发代理自动跟随其中的 `PORT`（默认 28553），已有环境变量优先。未设置教师密码时，开发命令会提示配置步骤并退出。
 
 如果页面提示“服务器未返回有效数据”，请检查终端中的后端启动错误，并确认看到“服务已启动”日志。修改 `.env` 后停止并重新运行 `npm run dev`。
 
@@ -41,11 +41,11 @@ cp .env.example .env
 ./stop.sh
 ```
 
-默认端口 3000，监听所有网卡。学生访问 `http://教师电脑局域网IP:3000/student`，教师访问 `/teacher`；确保防火墙允许该端口。服务同时提供前端与 API，刷新任意学生路由可用。
+默认使用 HTTP，监听 `127.0.0.1:28553`。Linux 上的反向代理将 `logistic.jaylu.tech` 的请求（保留路径和查询参数）转发到 `http://127.0.0.1:28553`，可使用 `.proxyHostHeader(false)`。学生访问公网域名的 `/student`，教师访问 `/teacher`。服务同时提供前端与 API，刷新任意学生路由可用。若需局域网直连，可设置 `HOST=0.0.0.0` 并访问 `http://教师电脑局域网IP:28553/student`。
 
-配置来自环境变量或 `server/.env`：`PORT=3000`、`TEACHER_PASSWORD=你的密码`、`DATA_DIR=./runtime`。未设置密码时拒绝启动。`DATA_DIR` 相对服务端目录解析，存储 `app.db`、WAL 文件、可选 `scenario.json`、`app.pid` 和 `app.log`。不要把运行目录放到 `public/`。备份数据库前停止服务，或者使用 SQLite 支持的在线备份工具。
+配置来自环境变量或 `server/.env`：`PORT=28553`、`HOST=127.0.0.1`、`TEACHER_PASSWORD=你的密码`、`DATA_DIR=./runtime`。未设置密码时拒绝启动。`DATA_DIR` 相对服务端目录解析，存储 `app.db`、WAL 文件、可选 `scenario.json`、`app.pid` 和 `app.log`。不要把运行目录放到 `public/`。备份数据库前停止服务，或者使用 SQLite 支持的在线备份工具。
 
-教师会话为 HttpOnly Cookie，8 小时有效；重启服务需重新登录。经本机 HTTPS 反向代理部署时需转发正确的 Host 和 X-Forwarded-Proto。时间显示为北京时间。学生无需身份验证，仅适合课堂练习。
+教师会话为 HttpOnly Cookie，8 小时有效；重启服务需重新登录。同源校验额外允许 `http://logistic.jaylu.tech` 和 `https://logistic.jaylu.tech`，以支持代理重写 Host；其他外部来源仍被拒绝。HTTPS 可在本机反向代理终止，后端仍使用 HTTP；代理应设置正确的 X-Forwarded-Proto，使会话 Cookie 带 Secure 标记。时间显示为北京时间。学生无需身份验证，仅适合课堂练习。
 
 ## 实验数据
 

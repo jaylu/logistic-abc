@@ -8,7 +8,7 @@ while IFS= read -r line; do CONFIG+=("$line"); done < <(node --input-type=module
 import fs from "node:fs"; import path from "node:path";
 if (fs.existsSync(".env")) process.loadEnvFile(".env");
 console.log(path.resolve(process.env.DATA_DIR || "./runtime"));
-console.log(process.env.PORT || "3000");
+console.log(process.env.PORT || "28553");
 ')
 DATA_DIR="${CONFIG[0]:-}"
 PORT="${CONFIG[1]:-}"

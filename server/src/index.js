@@ -15,8 +15,8 @@ if (!password) {
   process.exit(1)
 }
 
-const port = Number(process.env.PORT || 3000)
-const host = process.env.HOST || '0.0.0.0'
+const port = Number(process.env.PORT || 28553)
+const host = process.env.HOST || '127.0.0.1'
 const dataDir = path.resolve(serverDir, process.env.DATA_DIR || './runtime')
 fs.mkdirSync(dataDir, { recursive: true })
 
