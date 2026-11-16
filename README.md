@@ -4,7 +4,16 @@ Vue 3 + Vite 学生/教师界面，Express API，Node 内置 SQLite。界面为�
 
 ## 本地开发
 
-需要 Node.js ≥ 22.13 和 npm。所有代码均为 JavaScript。
+需要 Node.js ≥ 26.0.0 和 npm。所有代码均为 JavaScript。
+
+项目使用 Node 26，仓库根目录的 `.nvmrc` 已指定版本。已安装 nvm 时先运行 `nvm install && nvm use`。
+
+Linux 安装脚本：以应用用户（例如 `appuser`）运行 `bash scripts/install-node.sh`，不要使用 sudo。脚本安装或加载 nvm，执行 `nvm install 26`、`nvm alias default 26` 和 `nvm use 26`。可从本地上传并安装：
+
+```bash
+scp -P 18847 scripts/install-node.sh appuser@tc2:~/install-node.sh
+ssh -p 18847 appuser@tc2 'bash ~/install-node.sh'
+```
 
 ```bash
 npm install
@@ -29,7 +38,34 @@ npm run test:release  # 解压到临时目录，验证启动、重复启动、�
 
 ## 部署
 
-目标机器需要 Node.js ≥ 22.13；以下脚本需要 bash（Windows 可使用支持 bash 的环境，或运行 `node src/index.js`）。
+自动发布到 `appuser@tc2`（SSH 端口 `18847`）：
+
+```bash
+npm run release
+```
+
+该命令先运行 `npm run build`，再用 `scp -P 18847` 上传发布包到 `~/apps/logistic/`，在远端解压到 `~/apps/logistic/server/`，为 `*.sh` 添加执行权限，依次运行 `stop.sh`、`start.sh` 和 `query.sh`。任一步失败都会停止发布并返回非零退出码。本机需要可用的 SSH/SCP 和远端登录权限。远端使用 Bash 登录环境；若找不到 Node.js，会尝试加载 nvm（`NVM_DIR`、`XDG_CONFIG_HOME/nvm` 或 `~/.nvm`）。使用 nvm 时需配置默认 Node 版本。解压和重启前会检查 Node.js ≥ 26.0.0；未安装或版本过低时保留正在运行的服务并退出。
+
+首次发布或修改教师密码时，可以运行：
+
+```bash
+npm run release -- --password '你的教师密码'
+```
+
+注意 npm 参数前的 `--`。命令行密码可能保存在 shell 历史中；推荐通过 `RELEASE_TEACHER_PASSWORD` 环境变量传入。以下 Bash 示例隐藏输入，且不会将密码文本写入命令历史：
+
+```bash
+read -r -s -p 'Teacher password: ' RELEASE_TEACHER_PASSWORD; printf '\n'
+export RELEASE_TEACHER_PASSWORD
+npm run release
+unset RELEASE_TEACHER_PASSWORD
+```
+
+显式 `--password` 优先于环境变量。提供密码时，会通过 SSH 标准输入传输并更新远端 `server/.env`，保留其他配置值（重新写入时不保留注释），文件权限设为 `600`。不要在密码中同时混用单引号、双引号和反引号；无法在 `.env` 中原样保存的密码会在构建前被拒绝。密码不会传入构建进程。
+
+不提供密码时保留远端 `.env`。首次发布如未提供密码，会创建 `.env` 并停止；可用上述命令重新发布，或登录 `ssh -p 18847 appuser@tc2` 编辑 `~/apps/logistic/server/.env`。发布不会上传本地 `.env` 或数据库，远端运行数据会保留。
+
+目标机器需要 Node.js ≥ 26.0.0；以下脚本需要 bash（Windows 可使用支持 bash 的环境，或运行 `node src/index.js`）。
 
 ```bash
 tar -xzf logistic-abc-server.tar.gz

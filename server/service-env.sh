@@ -12,7 +12,7 @@ console.log(process.env.PORT || "28553");
 ')
 DATA_DIR="${CONFIG[0]:-}"
 PORT="${CONFIG[1]:-}"
-if [[ -z "${DATA_DIR}" || -z "${PORT}" ]]; then echo '无法读取配置，请检查 Node.js ≥ 22.13 和 .env。' >&2; exit 1; fi
+if [[ -z "${DATA_DIR}" || -z "${PORT}" ]]; then echo '无法读取配置，请检查 Node.js ≥ 26.0.0 和 .env。' >&2; exit 1; fi
 PID_FILE="${DATA_DIR}/app.pid"
 LOG_FILE="${DATA_DIR}/app.log"
 APP_ENTRY="${SERVER_DIR}/src/index.js"

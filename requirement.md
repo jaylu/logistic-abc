@@ -468,7 +468,7 @@ logistic-abc/
 
 ### 11.2 开发与构建
 
-- Node.js ≥ 22.13（推荐当前 LTS），写入 `engines`。
+- Node.js ≥ 26.0.0（使用 Node 26），写入 `engines`。
 - `npm install` 后 `npm run dev` 同时启动前端和后端。
 - `npm run build`：构建前端到 `server/public/`，安装后端生产依赖，打包为 `dist/logistic-abc-server.tar.gz`（解压后顶层为 `server/`，包含 `node_modules`）。不打包 `.env`、数据库、日志。
 
