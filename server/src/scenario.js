@@ -1,3 +1,4 @@
+import { validateScenarioV3 } from './scenario-v3.js'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -12,6 +13,7 @@ const isText = (x, max) => typeof x === 'string' && x.trim().length > 0 && Array
 // 返回中文问题列表；为空表示通过
 export function validateScenario(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return ['实验数据必须是一个 JSON 对象']
+  if (s.schemaVersion === 3) return validateScenarioV3(s)
   const errors = []
   if (s.schemaVersion !== 1) errors.push('schemaVersion 必须为 1')
   if (!isText(s.name, 40)) errors.push('name（场景名称）必填，最多 40 字')
@@ -113,6 +115,7 @@ export function placementErrors(placement, skus, slotIds) {
 
 // 只保留已知字段，去除多余内容
 export function normalizeScenario(s) {
+  if (s.schemaVersion === 3) return { schemaVersion: 3, name: s.name.trim(), description: s.description.trim(), ...(s.scenarioRevision === undefined ? {} : { scenarioRevision: s.scenarioRevision }), thresholds: structuredClone(s.thresholds), abcCheckLimit: s.abcCheckLimit, fullScoreImprovement: s.fullScoreImprovement, warehouse: structuredClone(s.warehouse), products: s.products.map(p => ({ sku: p.sku, name: p.name.trim(), turnover: p.turnover, stockCartons: p.stockCartons, carton: Object.fromEntries(['lengthMm','widthMm','heightMm','unitsPerCarton','grossWeightKg'].map(k => [k,p.carton[k]])) })), baselinePlacement: { ...s.baselinePlacement }, documentReview: { ...structuredClone(s.documentReview), maxMarks: s.documentReview.maxMarks ?? s.documentReview.errorCount }, scoring: { ...s.scoring } }
   return {
     schemaVersion: 1,
     name: s.name.trim(),
@@ -147,7 +150,7 @@ export function createScenarioStore(dataDir, log = console) {
       try {
         const custom = JSON.parse(fs.readFileSync(overrideFile, 'utf8'))
         const errors = validateScenario(custom)
-        if (errors.length === 0) return { scenario: normalizeScenario(custom), isDefault: false }
+        if (errors.length === 0 && custom.schemaVersion === 3) return { scenario: normalizeScenario(custom), isDefault: false }
         log.error(`自定义实验数据无效，改用默认数据：${errors.join('；')}`)
       } catch (err) {
         log.error(`读取自定义实验数据失败，改用默认数据：${err.message}`)

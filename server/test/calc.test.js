@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import * as serverCalc from '../src/calc.js'
 import * as clientCalc from '../../client/src/calc.js'
 
-const scenario = JSON.parse(fs.readFileSync(new URL('../data/default-scenario.json', import.meta.url)))
+const scenario = JSON.parse(fs.readFileSync(new URL('./fixtures/scenario-v1.json', import.meta.url)))
 
 // 前后端各有一份 calc.js，同一组用例分别运行，保证结果一致
 for (const [side, calc] of [['server', serverCalc], ['client', clientCalc]]) {

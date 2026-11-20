@@ -21,7 +21,8 @@ function cell(value) {
 
 const HEADERS = [
   '轮次', '学号', '姓名', '提交时间', '分类正确数', '商品总数', '分类得分', '布局得分', '反思得分', '总分',
-  '初始拣货距离(米)', '当前拣货距离(米)', '改善率(%)', '反思内容',
+  '初始指标（v3加权等效米/旧版米）', '当前指标（v3加权等效米/旧版米）', '改善率(%)', '反思内容',
+  'placementValidityScore', 'placementEfficiencyScore', 'documentReviewScore', 'documentReviewCorrectMarks', 'documentReviewWrongMarks', 'documentReviewMissedMarks', 'documentReviewErrorCount', 'baselineCost', 'currentCost', 'placementValid', 'occupiedSlots', 'slotCapacityErrors', '储位编码清单', 'availableSlots', 'disabledSlots', 'availableUtilization',
 ]
 
 export function submissionsCsv(roundId, submissions) {
@@ -31,9 +32,9 @@ export function submissionsCsv(roundId, submissions) {
     lines.push(
       [
         roundId, s.studentId, s.studentName, formatBeijingTime(s.submittedAt),
-        metrics.abcCorrect, metrics.abcTotal, scores.abc, scores.layout, scores.reflection, scores.total,
+        metrics.abcCorrect, metrics.abcTotal, scores.abc, scores.layout ?? (scores.placementValidity + scores.placementEfficiency), scores.reflection, scores.total,
         metrics.baselineDistance, metrics.currentDistance, Math.round(metrics.improvement * 1000) / 10,
-        s.answer.reflection,
+        s.answer.reflection, scores.placementValidity, scores.placementEfficiency, scores.documentReview ?? '历史版本/未参加', s.result.review?.correctMarks, s.result.review?.wrongMarks, s.result.review?.missedMarks, s.result.review?.errorCount, metrics.baselineCost, metrics.currentCost, metrics.placementValid, metrics.occupiedSlots, metrics.slotCapacityErrors?.join('；'), Object.entries(s.answer.placement).map(([sku, code]) => `${sku}:${code}`).join('; '), metrics.availableSlots, metrics.disabledSlots, metrics.availableUtilization,
       ]
         .map(cell)
         .join(','),

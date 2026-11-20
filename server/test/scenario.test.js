@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { validateScenario, normalizeScenario } from '../src/scenario.js'
-const scenario = JSON.parse(fs.readFileSync(new URL('../data/default-scenario.json', import.meta.url)))
+const scenario = JSON.parse(fs.readFileSync(new URL('./fixtures/scenario-v1.json', import.meta.url)))
 test('场景验证拒绝无法精确计算的周转量', () => {
   assert.deepEqual(validateScenario(scenario), [])
   for (const value of [Infinity, Number.MAX_VALUE, 0, -1, 1.5]) {

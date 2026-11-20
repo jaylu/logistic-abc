@@ -1,5 +1,7 @@
 # 物流 ABC 分类与储位规划课堂实训
 
+> 历史v1实现规格；当前增量升级以 [update-v1.md](update-v1.md) 为准。
+
 > 实现规格（MVP）  
 > 技术栈：Vue 3 + Vite（前端）、Node.js + Express（后端）、SQLite（Node 内置 `node:sqlite`，仅服务端）  
 > 一句话：教师点“开始新一轮”，学生输入学号姓名完成 ABC 分类和储位摆放并提交，教师查看成绩、导出 CSV。

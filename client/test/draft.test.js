@@ -15,3 +15,12 @@ test('损坏草稿及浏览器存储异常不会中断页面', () => {
   const denied = { getItem() { throw new Error() }, setItem() { throw new Error() }, removeItem() { throw new Error() } }
   assert.equal(readDraft(denied),null); assert.equal(saveDraft({},denied),false); assert.equal(clearDraft(denied),false)
 })
+test('v3草稿隔离学号并保留审核题、标注、锁定快照', () => {
+  const s=storage(), a=newDraft({id:'r1',scenario:{schemaVersion:3,baselinePlacement:{P01:'01101101'}}},'S01','张三')
+  a.step='review';a.review={reviewId:'same',reviewAttemptId:'attempt',createdAt:'2026-11-20',placementSnapshot:{...a.placement},marks:[{rowId:'P01',fieldKey:'unit'}]}
+  saveDraft(a,s);assert.deepEqual(readDraft(s).review,a.review)
+  const b=newDraft({id:'r1',scenario:{schemaVersion:3,baselinePlacement:{P01:'01101101'}}},'S02','李四')
+  saveDraft(b,s);assert.equal(s.getItem('logistic-abc:r1:S01:3'),null);assert.equal(readDraft(s).review,null)
+  s.setItem('logistic-abc:student:v1',JSON.stringify({...a,schemaVersion:1}));clearDraft(s)
+  assert.equal(readDraft(s),null);assert.equal(s.getItem('other-app'),'keep')
+})

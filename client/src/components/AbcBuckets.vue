@@ -66,8 +66,8 @@ onUnmounted(cancel)
           <strong>{{ cls }} 类</strong><span>{{ rows.filter(p => answers[p.sku] === cls).length }} 个商品</span><span class="bucket-hint">{{ drag?.bucket === cls ? '松开放入' : selected ? '点击放入' : '拖到这里' }}</span>
         </button>
         <div class="bucket-products">
-          <button v-for="p in rows.filter(p => answers[p.sku] === cls)" :key="p.sku" class="bucket-product" :class="{ selected: selected === p.sku, incorrect: checked && !checked[p.sku] }" :disabled="disabled" :aria-pressed="selected === p.sku" :aria-label="`${p.sku} ${p.name}，当前 ${cls} 类，拖动可重新分类`" @pointerdown="startDrag($event, p.sku)" @dragstart.prevent @click="select(p.sku)">
-            <span v-if="checked && !checked[p.sku]" class="error" aria-label="分类错误">✕</span><span>{{ p.sku }} {{ p.name }}</span>
+          <button v-for="p in rows.filter(p => answers[p.sku] === cls)" :key="p.sku" class="bucket-product" :class="{ selected: selected === p.sku, incorrect: checked && checked[p.sku] === false }" :disabled="disabled" :aria-pressed="selected === p.sku" :aria-label="`${p.sku} ${p.name}，当前 ${cls} 类，拖动可重新分类`" @pointerdown="startDrag($event, p.sku)" @dragstart.prevent @click="select(p.sku)">
+            <span v-if="checked && checked[p.sku] === false" class="error" aria-label="分类错误">✕</span><span>{{ p.sku }} {{ p.name }}</span>
           </button>
         </div>
       </section>

@@ -1,3 +1,5 @@
+import { getPlacementCost, getStorageMetrics, getImprovementRate, bestPlacement } from './warehouse.js'
+import { reviewDocument, scoreReview } from './review.js'
 // ABC 分类、仓库距离与评分的纯函数。
 // 本文件在 client/src/calc.js 有一份相同副本，两端由同一组测试保证结果一致。
 
@@ -154,6 +156,10 @@ export function improvementRate(baseline, current) {
 }
 
 export function layoutMetrics(scenario, placement) {
+  if (scenario.schemaVersion === 3) {
+    const baselineCost = getPlacementCost(scenario.baselinePlacement, scenario), currentCost = getPlacementCost(placement, scenario)
+    return { baselineCost, currentCost, baselineDistance: baselineCost, currentDistance: currentCost, improvement: getImprovementRate(baselineCost, currentCost), ...getStorageMetrics(placement, scenario), simulated: true }
+  }
   const distances = slotDistances(scenario)
   const baselineDistance = pickDistance(scenario.baselinePlacement, scenario.products, distances)
   const currentDistance = pickDistance(placement, scenario.products, distances)
@@ -169,6 +175,11 @@ function placeInOrder(scenario, orderedSkus) {
 
 // 供教师参考：按周转量摆放（最优）与按 ABC 分类摆放的改善率
 export function referenceMetrics(scenario) {
+  if (scenario.schemaVersion === 3) {
+    const best = layoutMetrics(scenario, bestPlacement(scenario)), counts = { A: 0, B: 0, C: 0 }
+    for (const cls of Object.values(classifyAbc(scenario.products, scenario.thresholds).classes)) counts[cls]++
+    return { baselineDistance: best.baselineCost, bestImprovement: best.improvement, abcImprovement: best.improvement, classCounts: counts }
+  }
   const { classes, rows } = classifyAbc(scenario.products, scenario.thresholds)
   const byFrequency = [...scenario.products]
     .sort((x, y) => (y.turnover ?? y.pickFrequency) - (x.turnover ?? x.pickFrequency) || (x.sku < y.sku ? -1 : 1))
@@ -195,7 +206,17 @@ function pct(x) {
   return `${round1(x * 100).toFixed(1)}%`
 }
 
-export function scoreSubmission(scenario, answer) {
+export function scoreSubmission(scenario, answer, context = {}) {
+  if (scenario.schemaVersion === 3) {
+    const w = scenario.scoring, metrics = layoutMetrics(scenario, answer.placement)
+    const classes = classifyAbc(scenario.products, scenario.thresholds).classes
+    const abcCorrect = scenario.products.filter(p => answer.abcAnswers[p.sku] === classes[p.sku]).length
+    const document = reviewDocument(answer.placement, scenario, context, answer.review)
+    const review = scoreReview(answer.review.marks, document.errorCells, scenario.documentReview, w.documentReview)
+    const scores = { abc: round1(abcCorrect / scenario.products.length * w.abc), placementValidity: w.placementValidity, placementEfficiency: round1(Math.min(1, Math.max(0, metrics.improvement) / scenario.fullScoreImprovement) * w.placementEfficiency), documentReview: review.score, reflection: round1(reflectionScore(answer.reflection) / 10 * w.reflection) }
+    scores.total = round1(Object.values(scores).reduce((a, b) => a + b, 0))
+    return { scores, scoreMax: w, metrics: { ...metrics, abcCorrect, abcTotal: scenario.products.length, reflectionChars: countChars(answer.reflection), placementValid: true, slotCapacityErrors: [] }, review: { ...review, document, marks: answer.review.marks }, feedback: { abc: `分类正确 ${abcCorrect}/${scenario.products.length}`, placementValidity: '全部商品货位合法、唯一且容量足够', placementEfficiency: `模拟成本改善 ${pct(metrics.improvement)}，满分线 ${pct(scenario.fullScoreImprovement)}`, documentReview: `命中 ${review.correctMarks}，误标 ${review.wrongMarks}，漏标 ${review.missedMarks}`, reflection: '30字以上满分，10～29字半分；教师另行阅读内容' } }
+  }
   const { classes } = classifyAbc(scenario.products, scenario.thresholds)
   const total = scenario.products.length
   const correct = scenario.products.filter((p) => answer.abcAnswers[p.sku] === classes[p.sku]).length

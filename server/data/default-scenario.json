@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 1,
-  "name": "电商小件仓（默认场景）",
-  "description": "某电商仓库存放 12 种数码商品。请根据周转量和品项数的累积占比完成 ABC 分类，再将周转量大的商品安排在靠近出库口的位置。",
+  "schemaVersion": 3,
+  "name": "电商数码商品仓（托盘货架版）",
+  "description": "12种数码商品；完成ABC分类、48个托盘货位储位规划，再审核由本人储位方案生成的储位分配单（含模拟录入错误）并标注。周转量及包装库存为教学模拟数据。",
   "thresholds": {
     "turnover": {
       "a": 0.8,
@@ -14,86 +14,283 @@
   },
   "abcCheckLimit": 3,
   "fullScoreImprovement": 0.3,
-  "cellSizeMeters": 5,
-  "map": [
-    "#SSSSSS",
-    "E......",
-    "#SSSSSS"
-  ],
+  "warehouse": {
+    "zoneCode": "01",
+    "entry": {
+      "id": "E01",
+      "side": "west",
+      "aisle": "central"
+    },
+    "layout": {
+      "rows": 2,
+      "baysPerRow": 4,
+      "levelsPerBay": 3,
+      "slotsPerLevel": 2,
+      "bayPitchMm": 2900,
+      "mainAisleWidthMm": 3000
+    },
+    "slot": {
+      "clearWidthMm": 1350,
+      "clearDepthMm": 1100,
+      "levelClearHeightsMm": [
+        1010,
+        1040,
+        960
+      ],
+      "handlingClearanceMm": 150
+    },
+    "pallet": {
+      "lengthMm": 1200,
+      "widthMm": 1000,
+      "heightMm": 150,
+      "tareWeightKg": 20,
+      "maxPayloadKg": 1000
+    },
+    "locationCode": {
+      "format": "ZZRCCLPP",
+      "zoneDigits": 2,
+      "rowDigits": 1,
+      "bayDigits": 2,
+      "levelDigits": 1,
+      "slotDigits": 2
+    },
+    "levelPenalties": [
+      0,
+      3,
+      6
+    ],
+    "disabledLocations": {
+      "01101202": "其他业务占用",
+      "01101301": "其他业务占用",
+      "01101302": "其他业务占用",
+      "01102102": "其他业务占用",
+      "01102202": "其他业务占用",
+      "01102301": "其他业务占用",
+      "01102302": "其他业务占用",
+      "01103102": "其他业务占用",
+      "01103201": "其他业务占用",
+      "01103202": "其他业务占用",
+      "01103301": "其他业务占用",
+      "01103302": "其他业务占用",
+      "01104102": "其他业务占用",
+      "01104201": "其他业务占用",
+      "01104202": "其他业务占用",
+      "01104302": "其他业务占用",
+      "01201202": "其他业务占用",
+      "01201301": "其他业务占用",
+      "01201302": "其他业务占用",
+      "01202101": "其他业务占用",
+      "01202102": "其他业务占用",
+      "01202201": "其他业务占用",
+      "01202202": "其他业务占用",
+      "01202302": "其他业务占用",
+      "01203101": "其他业务占用",
+      "01203102": "其他业务占用",
+      "01203202": "其他业务占用",
+      "01203302": "其他业务占用",
+      "01204101": "其他业务占用",
+      "01204102": "其他业务占用",
+      "01204202": "其他业务占用",
+      "01204301": "其他业务占用"
+    }
+  },
   "products": [
     {
       "sku": "P01",
       "name": "笔记本电脑",
-      "turnover": 30
+      "turnover": 30,
+      "carton": {
+        "lengthMm": 500,
+        "widthMm": 350,
+        "heightMm": 300,
+        "unitsPerCarton": 5,
+        "grossWeightKg": 14
+      },
+      "stockCartons": 6
     },
     {
       "sku": "P02",
       "name": "智能手机",
-      "turnover": 120
+      "turnover": 120,
+      "carton": {
+        "lengthMm": 420,
+        "widthMm": 320,
+        "heightMm": 250,
+        "unitsPerCarton": 20,
+        "grossWeightKg": 10
+      },
+      "stockCartons": 8
     },
     {
       "sku": "P03",
       "name": "平板电脑",
-      "turnover": 25
+      "turnover": 25,
+      "carton": {
+        "lengthMm": 480,
+        "widthMm": 340,
+        "heightMm": 300,
+        "unitsPerCarton": 10,
+        "grossWeightKg": 9
+      },
+      "stockCartons": 6
     },
     {
       "sku": "P04",
       "name": "蓝牙耳机",
-      "turnover": 240
+      "turnover": 240,
+      "carton": {
+        "lengthMm": 500,
+        "widthMm": 400,
+        "heightMm": 300,
+        "unitsPerCarton": 40,
+        "grossWeightKg": 8
+      },
+      "stockCartons": 8
     },
     {
       "sku": "P05",
       "name": "智能手表",
-      "turnover": 35
+      "turnover": 35,
+      "carton": {
+        "lengthMm": 450,
+        "widthMm": 350,
+        "heightMm": 250,
+        "unitsPerCarton": 30,
+        "grossWeightKg": 9
+      },
+      "stockCartons": 6
     },
     {
       "sku": "P06",
       "name": "移动电源",
-      "turnover": 200
+      "turnover": 200,
+      "carton": {
+        "lengthMm": 450,
+        "widthMm": 350,
+        "heightMm": 300,
+        "unitsPerCarton": 30,
+        "grossWeightKg": 18
+      },
+      "stockCartons": 6
     },
     {
       "sku": "P07",
       "name": "机械键盘",
-      "turnover": 45
+      "turnover": 45,
+      "carton": {
+        "lengthMm": 550,
+        "widthMm": 450,
+        "heightMm": 350,
+        "unitsPerCarton": 10,
+        "grossWeightKg": 12
+      },
+      "stockCartons": 4
     },
     {
       "sku": "P08",
       "name": "无线鼠标",
-      "turnover": 170
+      "turnover": 170,
+      "carton": {
+        "lengthMm": 480,
+        "widthMm": 400,
+        "heightMm": 300,
+        "unitsPerCarton": 40,
+        "grossWeightKg": 9
+      },
+      "stockCartons": 8
     },
     {
       "sku": "P09",
       "name": "手机壳",
-      "turnover": 420
+      "turnover": 420,
+      "carton": {
+        "lengthMm": 500,
+        "widthMm": 400,
+        "heightMm": 350,
+        "unitsPerCarton": 100,
+        "grossWeightKg": 12
+      },
+      "stockCartons": 6
     },
     {
       "sku": "P10",
       "name": "数据线",
-      "turnover": 360
+      "turnover": 360,
+      "carton": {
+        "lengthMm": 500,
+        "widthMm": 400,
+        "heightMm": 350,
+        "unitsPerCarton": 100,
+        "grossWeightKg": 16
+      },
+      "stockCartons": 6
     },
     {
       "sku": "P11",
       "name": "屏幕贴膜",
-      "turnover": 300
+      "turnover": 300,
+      "carton": {
+        "lengthMm": 450,
+        "widthMm": 350,
+        "heightMm": 250,
+        "unitsPerCarton": 120,
+        "grossWeightKg": 10
+      },
+      "stockCartons": 8
     },
     {
       "sku": "P12",
       "name": "电脑包",
-      "turnover": 40
+      "turnover": 40,
+      "carton": {
+        "lengthMm": 600,
+        "widthMm": 450,
+        "heightMm": 400,
+        "unitsPerCarton": 12,
+        "grossWeightKg": 10
+      },
+      "stockCartons": 4
     }
   ],
   "baselinePlacement": {
-    "P01": "R1-S1",
-    "P03": "R2-S1",
-    "P12": "R1-S2",
-    "P07": "R2-S2",
-    "P05": "R1-S3",
-    "P02": "R2-S3",
-    "P08": "R1-S4",
-    "P04": "R2-S4",
-    "P06": "R1-S5",
-    "P11": "R2-S5",
-    "P10": "R1-S6",
-    "P09": "R2-S6"
+    "P01": "01101101",
+    "P02": "01203201",
+    "P03": "01201101",
+    "P04": "01204201",
+    "P05": "01102101",
+    "P06": "01104101",
+    "P07": "01201201",
+    "P08": "01103101",
+    "P09": "01204302",
+    "P10": "01104301",
+    "P11": "01203301",
+    "P12": "01101201"
+  },
+  "documentReview": {
+    "enabled": true,
+    "errorCount": 5,
+    "maxMarks": 5,
+    "allowedErrorFields": [
+      "locationCode",
+      "productName",
+      "sku",
+      "specification",
+      "expectedCartons",
+      "actualCartons",
+      "unit"
+    ],
+    "oneErrorPerRow": true,
+    "randomization": "deterministic-seeded",
+    "grading": {
+      "pointsPerCorrectMark": 4,
+      "penaltyPerWrongMark": 2
+    }
+  },
+  "scoring": {
+    "abc": 35,
+    "placementValidity": 15,
+    "placementEfficiency": 25,
+    "documentReview": 20,
+    "reflection": 5
   }
 }

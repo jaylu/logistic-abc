@@ -1,3 +1,5 @@
+import { validatePlacement } from './warehouse.js'
+import { validateReview } from './review.js'
 import fs from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
@@ -53,11 +55,16 @@ function parseSubmission(body, scenario) {
     if (extra.length) errors.push(`分类答案包含未知商品：${extra.join('、')}`)
   }
   if (!placement) errors.push('缺少储位摆放')
+  else if (scenario.schemaVersion === 3) errors.push(...validatePlacement(placement, scenario))
   else {
     const slotIds = new Set(parseMap(scenario.map).slots.map((s) => s.slotId))
     errors.push(...placementErrors(placement, skus, slotIds))
   }
 
+  if (scenario.schemaVersion === 3) {
+    if (body.schemaVersion !== 3) errors.push('场景版本已更新，请重新开始')
+    if (!errors.length) errors.push(...validateReview(body.review, placement, scenario, { sessionId: body.roundId, studentId }))
+  }
   if (errors.length) throw new HttpError(422, 'INVALID_SUBMISSION', errors.join('；'))
   return {
     studentId,
@@ -66,6 +73,7 @@ function parseSubmission(body, scenario) {
       abcAnswers: Object.fromEntries(skus.map((sku) => [sku, abcAnswers[sku]])),
       placement: Object.fromEntries(skus.map((sku) => [sku, placement[sku]])),
       reflection,
+      ...(scenario.schemaVersion === 3 ? { schemaVersion: 3, review: { reviewId: body.review.reviewId, reviewAttemptId: body.review.reviewAttemptId, createdAt: body.review.createdAt, placementFingerprint: body.review.placementFingerprint, placementSnapshot: { ...body.review.placementSnapshot }, completed: true, marks: body.review.marks.map(({ rowId, fieldKey }) => ({ rowId, fieldKey })).sort((a, b) => `${a.rowId}:${a.fieldKey}`.localeCompare(`${b.rowId}:${b.fieldKey}`)) } } : {}),
     },
   }
 }
@@ -117,7 +125,7 @@ export function createApp({ db, scenarios, password, publicDir, log = console })
         studentId,
         studentName,
         answer,
-        result: scoreSubmission(round.scenario, answer),
+        result: scoreSubmission(round.scenario, answer, { sessionId: round.id, studentId, studentName }),
         submittedAt: new Date().toISOString(),
       }
       db.insertSubmission(submission)
@@ -161,6 +169,7 @@ export function createApp({ db, scenarios, password, publicDir, log = console })
         submittedAt: s.submittedAt,
         scores: s.result.scores,
         improvement: s.result.metrics.improvement,
+        review: s.result.review ? { correctMarks: s.result.review.correctMarks, wrongMarks: s.result.review.wrongMarks, missedMarks: s.result.review.missedMarks } : null,
       })),
     )
   })
@@ -189,8 +198,15 @@ export function createApp({ db, scenarios, password, publicDir, log = console })
     res.send(submissionsCsv(round.id, db.listSubmissions(round.id)))
   })
 
+  teacher.get('/export.json', (req, res) => {
+    const round = requireRound()
+    res.setHeader('Content-Disposition', `attachment; filename="abc-details-${round.id.slice(0, 6)}.json"`)
+    res.json({ round, submissions: db.listSubmissions(round.id) })
+  })
+
   const checkScenario = (body) => {
     const errors = validateScenario(body)
+    if (body?.schemaVersion !== 3) errors.push('新课堂请使用schemaVersion 3场景')
     if (errors.length) throw new HttpError(422, 'INVALID_SCENARIO', errors.join('\n'))
     return normalizeScenario(body)
   }
