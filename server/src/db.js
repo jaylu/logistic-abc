@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS submissions (
 `
 
 function toRound(row) {
-  return row && { id: row.id, startedAt: row.started_at, scenario: JSON.parse(row.scenario_json) }
+  return row && { id: row.id, startedAt: row.started_at, demo: row.is_demo === 1, scenario: JSON.parse(row.scenario_json) }
 }
 
 function toSubmission(row) {
@@ -44,11 +44,14 @@ export function openDb(dataDir) {
   const db = new DatabaseSync(path.join(dataDir, 'app.db'))
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;')
   db.exec(SCHEMA)
+  if (!db.prepare('PRAGMA table_info(rounds)').all().some(column => column.name === 'is_demo')) {
+    db.exec('ALTER TABLE rounds ADD COLUMN is_demo INTEGER NOT NULL DEFAULT 0')
+  }
 
   const stmt = {
     activeRound: db.prepare('SELECT * FROM rounds WHERE is_active = 1'),
     deactivate: db.prepare('UPDATE rounds SET is_active = 0 WHERE is_active = 1'),
-    insertRound: db.prepare('INSERT INTO rounds (id, started_at, is_active, scenario_json) VALUES (?, ?, 1, ?)'),
+    insertRound: db.prepare('INSERT INTO rounds (id, started_at, is_active, scenario_json, is_demo) VALUES (?, ?, 1, ?, ?)'),
     countSubmissions: db.prepare('SELECT COUNT(*) AS n FROM submissions WHERE round_id = ?'),
     listSubmissions: db.prepare('SELECT * FROM submissions WHERE round_id = ? ORDER BY student_id'),
     getSubmission: db.prepare('SELECT * FROM submissions WHERE id = ?'),
@@ -76,13 +79,13 @@ export function openDb(dataDir) {
     close: () => db.close(),
     transaction,
     activeRound: () => toRound(stmt.activeRound.get()),
-    startRound(scenario) {
+    startRound(scenario, demo = false) {
       return transaction(() => {
         stmt.deactivate.run()
         const id = randomUUID()
         const startedAt = new Date().toISOString()
-        stmt.insertRound.run(id, startedAt, JSON.stringify(scenario))
-        return { id, startedAt, scenario }
+        stmt.insertRound.run(id, startedAt, JSON.stringify(scenario), demo ? 1 : 0)
+        return { id, startedAt, scenario, demo }
       })
     },
     countSubmissions: (roundId) => stmt.countSubmissions.get(roundId).n,

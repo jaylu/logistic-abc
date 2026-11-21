@@ -29,6 +29,12 @@ test('v3页面渲染：开始、ABC、48位地图、审核单与提交摘要', a
       const app=createSSRApp(Page);app.use(router)
       const html=await renderToString(app)
       assert.ok(html.includes(expected),`${file} missing ${expected}`)
+      assert.ok(!html.includes('演示：一键填写'), `${file}: normal round hides demo control`)
+      state.round.demo = true
+      const demoApp = createSSRApp(Page); demoApp.use(router)
+      const demoHtml = await renderToString(demoApp)
+      assert.ok(demoHtml.includes('演示：一键填写'), `${file}: demo round shows fill control`)
+      state.round.demo = false
       if(file==='LayoutPage') {
         assert.equal((html.match(/class="[^"]*\brack-cell\b[^"]*"/g) || []).length,48)
         assert.deepEqual([...html.matchAll(/data-rack-level="([^"]+)"/g)].map(m=>m[1]),['1-3','1-2','1-1','2-1','2-2','2-3'])

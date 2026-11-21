@@ -1,4 +1,5 @@
 <script setup>
+import { fillDemoStep } from '../demo.js'
 import { computed, ref } from 'vue'
 import { state, scenario, classified, complete, locked, notify } from '../state.js'
 import { percent } from '../format.js'
@@ -37,7 +38,7 @@ function paste() {
 </script>
 <template>
   <section>
-    <div class="section-heading"><div><p class="eyebrow">第1步 / 共4步 · 按周转量认识商品</p><h1>ABC 分类</h1></div><span class="muted">已分类 {{ Object.keys(state.draft.abcAnswers).length }} / {{ scenario.products.length }}</span></div>
+    <div class="section-heading"><div><p class="eyebrow">第1步 / 共4步 · 按周转量认识商品</p><h1>ABC 分类</h1><button v-if="state.round?.demo" :disabled="locked" @click="fillDemoStep('abc').then(() => { checked = null; error = '' })">演示：一键填写本步骤</button></div><span class="muted">已分类 {{ Object.keys(state.draft.abcAnswers).length }} / {{ scenario.products.length }}</span></div>
     <div class="rule">
       <p>按周转量从高到低排列，同量按 SKU 升序。两个累积占比均<strong>包含当前商品</strong>；每个商品计 1 个品项。两个因子分别判断后取较低等级（A ＞ B ＞ C），边界归前一类。</p>
       <p v-for="[factor, label] in [['turnover', '周转量累积占比'], ['itemCount', '品项数累积占比']]" :key="factor">{{ label }}：A：[0%, {{ percent(scenario.thresholds[factor].a) }}]；B：({{ percent(scenario.thresholds[factor].a) }}, {{ percent(scenario.thresholds[factor].b) }}]；C：({{ percent(scenario.thresholds[factor].b) }}, 100%]。</p>

@@ -25,6 +25,7 @@ onUnmounted(() => { window.removeEventListener('focus', focus); window.removeEve
   <nav class="steps" v-if="route.meta.step" aria-label="实训步骤"><RouterLink v-for="[key,label,path] in steps" :key="key" :to="path" :class="{ current: route.meta.step === key }" :aria-current="route.meta.step === key ? 'step' : undefined">{{ label }}</RouterLink></nav>
   <div v-if="route.meta.step && (state.expired || state.error || state.draft?.submissionResult)" class="banner" role="status"><template v-if="state.expired">⚠ 老师已开始新一轮，本次草稿不能提交。请复制反思后刷新页面，进入新一轮。</template><template v-else-if="state.error">⚠ {{ state.error }} <button @click="checkRound">重试</button></template><template v-else>✓ 你已提交，答案为只读。如需重做，请联系老师。</template></div>
   <ConfirmDialog v-if="changing" message="清除本机当前学生的草稿并换人？服务器已提交成绩不受影响。" @cancel="changing = false" @confirm="switchStudent" />
+  <p v-if="route.meta.step && state.round?.demo" class="banner" role="status">DEMO 演示专用轮次 · 可一键填写当前步骤，仅供教学展示。</p>
   <main><RouterView /></main>
   <div v-if="requests.loading" class="loading" role="status">正在加载…</div>
   <div v-if="state.toast" class="toast" role="status">✓ {{ state.toast }}</div>

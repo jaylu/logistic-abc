@@ -1,3 +1,4 @@
+import { demoSubmission } from './demo.js'
 import { validatePlacement } from './warehouse.js'
 import { validateReview } from './review.js'
 import fs from 'node:fs'
@@ -21,7 +22,7 @@ class HttpError extends Error {
 }
 
 function roundSummary(db, round) {
-  return round ? { id: round.id, startedAt: round.startedAt, submissionCount: db.countSubmissions(round.id) } : null
+  return round ? { id: round.id, startedAt: round.startedAt, demo: round.demo, submissionCount: db.countSubmissions(round.id) } : null
 }
 
 // 把对象按键排序后序列化，用于判断两次提交内容是否相同
@@ -99,7 +100,7 @@ export function createApp({ db, scenarios, password, publicDir, log = console })
   api.get('/round', (req, res) => {
     const round = db.activeRound()
     if (!round) throw new HttpError(404, 'NO_ROUND', '老师还没有开始实训')
-    res.json({ id: round.id, startedAt: round.startedAt, scenario: round.scenario })
+    res.json({ id: round.id, startedAt: round.startedAt, demo: round.demo, scenario: round.scenario })
   })
 
   api.post('/submissions', express.json({ limit: '32kb' }), (req, res) => {
@@ -154,9 +155,31 @@ export function createApp({ db, scenarios, password, publicDir, log = console })
   })
 
   teacher.post('/rounds', (req, res) => {
-    const round = db.startRound(scenarios.current().scenario)
+    if (req.body?.demo !== undefined && typeof req.body.demo !== 'boolean') throw new HttpError(422, 'INVALID_MODE', '演示模式须为布尔值')
+    const round = db.startRound(scenarios.current().scenario, req.body?.demo === true)
     log.info(`开始新一轮 ${round.id}`)
     res.json(roundSummary(db, round))
+  })
+
+  teacher.post('/demo/submissions', (req, res) => {
+    const round = requireRound()
+    if (req.body?.roundId !== round.id) throw new HttpError(409, 'SESSION_EXPIRED', '轮次已更新，请刷新后重试')
+    if (!round.demo) throw new HttpError(403, 'DEMO_ONLY', '仅演示轮次可生成模拟提交')
+    const created = db.transaction(() => {
+      let count = 0
+      for (let i = 1; i <= 50; i++) {
+        const studentId = `DEMO-${String(i).padStart(3, '0')}`
+        if (db.findSubmission(round.id, studentId)) continue
+        const body = demoSubmission(round, studentId, i)
+        const { studentName, answer } = parseSubmission(body, round.scenario)
+        db.insertSubmission({ id: randomUUID(), roundId: round.id, studentId, studentName, answer,
+          result: scoreSubmission(round.scenario, answer, { sessionId: round.id, studentId, studentName }),
+          submittedAt: new Date().toISOString() })
+        count++
+      }
+      return count
+    })
+    res.json({ created, round: roundSummary(db, round) })
   })
 
   teacher.get('/submissions', (req, res) => {
