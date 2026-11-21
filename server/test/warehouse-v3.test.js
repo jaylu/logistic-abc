@@ -69,7 +69,8 @@ test('v3: 20/0/8/8/0审核评分、3错误配置、服务端五项满分', () =>
   const three=exercise(s); assert.equal(three.document.errorCells.length,3)
   assert.equal(scoreReview(three.document.errorCells,three.document.errorCells,s.documentReview).score,20)
   const placement=bestPlacement(s), ex=exercise(s,placement);ex.review.marks=ex.document.errorCells.map(({rowId,fieldKey})=>({rowId,fieldKey}))
-  const result=scoreSubmission(s,{placement,abcAnswers:classifyAbc(s.products,s.thresholds).classes,review:ex.review,reflection:'字'.repeat(30)},context)
+  const reflection='因为周转量高的A类商品拣货频繁，所以优先放在靠近出库口的位置，以缩短拣货距离。如果订单结构变化，我会重新计算并更新ABC分类，再按新结果重新分配储位，同时复核容量、堆高和载荷。'
+  const result=scoreSubmission(s,{placement,abcAnswers:classifyAbc(s.products,s.thresholds).classes,review:ex.review,reflection},context)
   assert.equal(result.scores.total,100)
   assert.deepEqual(Object.values(result.scoreMax),[35,15,25,20,5])
 })

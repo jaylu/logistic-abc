@@ -56,7 +56,7 @@ function answerFor(round, overrides = {}) {
     studentName: '张三',
     abcAnswers: classifyAbc(scenario.products, scenario.thresholds).classes,
     placement: { ...scenario.baselinePlacement },
-    reflection: '因为周转量高的商品应该放在离出库口更近的位置，这样往返距离最短。',
+    reflection: '因为周转量高的A类商品拣货频繁，所以优先放在靠近出库口的位置，以缩短拣货距离。如果订单结构变化，我会重新计算并更新ABC分类，再按新结果重新分配储位，同时复核容量、堆高和载荷。',
     ...overrides,
   }
   answer.review = createReview(answer.placement, scenario, { sessionId: round.id, studentId: answer.studentId }, 'test-attempt', '2026-11-20T00:00:00Z')
@@ -65,6 +65,8 @@ function answerFor(round, overrides = {}) {
 }
 
 test('教师鉴权', async () => {
+  assert.equal((await call('GET', '/teacher/statistics')).status, 401)
+  assert.equal((await call('GET', '/teacher/statistics.csv')).status, 401)
   assert.equal((await call('GET', '/teacher/me')).status, 401)
   assert.equal((await call('POST', '/teacher/rounds')).status, 401)
   assert.equal((await call('GET', '/teacher/export.csv')).status, 401)
@@ -85,6 +87,7 @@ test('教师鉴权', async () => {
 
 test('无轮次时学生得到 NO_ROUND，空 CSV', async () => {
   assert.equal((await call('GET', '/round')).data.error.code, 'NO_ROUND')
+  assert.equal((await call('GET', '/teacher/statistics')).data.statistics, null)
 })
 
 test('提交流程：成功、重试、冲突、不完整', async () => {
@@ -201,7 +204,28 @@ test('v3 API拒绝绕过审核、篡改布局和标注，忽略前端自报分�
   assert.equal(detail.result.review.document.errorCells.length,5)
   assert.equal(detail.answer.review.reviewScore,undefined)
   const csv=(await call('GET','/teacher/export.csv')).data
-  for(const field of ['documentReviewScore','documentReviewWrongMarks','documentReviewMissedMarks','occupiedSlots','01101101']) assert.ok(csv.includes(field))
+  for(const field of ['单据审核得分','误标数','漏标数','占用货位数','01101101']) assert.ok(csv.includes(field))
   const oldCount=db.countSubmissions(round.id)
   await startRound();assert.equal(db.countSubmissions(round.id),oldCount)
+})
+
+test('教学统计随提交、删除和新轮次更新，CSV使用本轮数据', async () => {
+  await startRound()
+  const round = (await call('GET', '/round')).data
+  assert.equal((await call('GET', '/teacher/statistics')).data.statistics.count, 0)
+  const submitted = await call('POST', '/submissions', answerFor(round))
+  const stats = (await call('GET', '/teacher/statistics')).data.statistics
+  assert.equal(stats.roundId, round.id)
+  assert.equal(stats.count, 1)
+  assert.equal(stats.tasks[0].achieved, 1)
+  assert.equal(stats.reviewTotals.missedMarks, round.scenario.documentReview.errorCount)
+  const csv = await call('GET', '/teacher/statistics.csv')
+  assert.equal(csv.status, 200)
+  assert.ok(csv.data.startsWith('\uFEFF轮次,'))
+  assert.match(csv.data, /商品分类错误/)
+  assert.match(csv.data, /加权等效米/)
+  await call('DELETE', `/teacher/submissions/${submitted.data.submissionId}`)
+  assert.equal((await call('GET', '/teacher/statistics')).data.statistics.count, 0)
+  await startRound()
+  assert.notEqual((await call('GET', '/teacher/statistics')).data.statistics.roundId, round.id)
 })

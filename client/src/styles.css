@@ -85,3 +85,23 @@
 
 .rack-cell[draggable="true"], .elevation button[draggable="true"] { cursor: grab; }
 .rack-cell[draggable="true"]:active, .elevation button[draggable="true"]:active { cursor: grabbing; }
+
+.teaching-statistics > .card, .stats-charts { margin-bottom: 20px; }
+.stats-overview { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; margin-bottom: 20px; }
+.stats-overview strong { display: block; font-size: 26px; margin-top: 8px; }
+.stats-charts { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+.stats-charts > .card { min-width: 0; }
+.stats-bar-row { margin: 16px 0; }
+.stats-bar-label { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; margin-bottom: 6px; }
+.stats-track { height: 12px; background: #e7efed; border-radius: 4px; overflow: hidden; }
+.stats-fill { height: 100%; background: #187460; }
+.stats-error { background: #ba4545; }
+.stats-missed { background: #cf8a2c; }
+.stats-stack { display: flex; }
+.stats-columns { display: flex; align-items: end; gap: 14px; margin: 32px 0; }
+.stats-column { flex: 1; min-width: 0; text-align: center; font-size: 13px; }
+.stats-column-track { height: 180px; display: flex; align-items: end; background: #e7efed; margin: 8px 0; }
+.stats-column-track > div { width: 100%; background: #187460; }
+.stats-column > span { display: block; min-height: 40px; }
+.stats-reflection { min-width: 180px; max-width: 650px; overflow-wrap: anywhere; }
+@media(max-width:850px) { .stats-charts { grid-template-columns: 1fr; } .stats-overview { grid-template-columns: repeat(2,minmax(0,1fr)); } }

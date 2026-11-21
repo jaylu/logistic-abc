@@ -88,9 +88,14 @@ for (const [side, calc] of [['server', serverCalc], ['client', clientCalc]]) {
     assert.equal(calc.scoreSubmission({ ...scenario, fullScoreImprovement: r.metrics.improvement * 2 }, { ...base, placement: swap }).scores.layout, 20)
     assert.equal(calc.scoreSubmission({ ...scenario, fullScoreImprovement: r.metrics.improvement }, { ...base, placement: swap }).scores.layout, 40)
 
-    for (const [n, score] of [[9, 0], [10, 5], [29, 5], [30, 10]]) {
-      assert.equal(calc.reflectionScore('  ' + '字'.repeat(n) + '  '), score, `${n} 字`)
-    }
+    assert.equal(calc.reflectionScore('字'.repeat(19)), 0)
+    assert.equal(calc.reflectionScore('字'.repeat(20)), 1)
+    assert.equal(calc.reflectionScore('字'.repeat(40)), 2)
+    const complete = '因为周转量高的A类商品拣货频繁，所以优先放在靠近出库口的位置，以缩短拣货距离。如果订单结构变化，我会重新计算并更新ABC分类，再按新结果重新分配储位，同时复核容量、堆高和载荷。'
+    assert.equal(calc.reflectionScore(complete), 10)
+    const keywords = calc.analyzeReflection('周转量 距离 订单变化 重新计算 调整储位 容量')
+    assert.ok(keywords.score < 10, '只罗列关键词不能满分')
+    assert.equal(keywords.breakdown.causal, 0)
     assert.equal(calc.countChars('😀😀'), 2)
   })
 }

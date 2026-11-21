@@ -197,9 +197,56 @@ export function referenceMetrics(scenario) {
   }
 }
 
+const REFLECTION_TERMS = {
+  demand: ['周转量', '周转率', '高频', '低频', '订单频率', '出库频率', '销量', '需求', 'ABC', 'A类', 'B类', 'C类'],
+  distance: ['距离', '就近', '靠近', '离出库口近', '出库口', '拣货路径', '拣货距离', '作业成本', '往返'],
+  change: ['订单结构变化', '订单变化', '需求变化', '销量变化', '周转量变化', '频率变化', '高频商品变化', '热销商品变化'],
+  recalculate: ['重新计算', '重新核算', '重算', '重新分类', '重做分类', '更新ABC', '调整ABC'],
+  relocate: ['重新分配', '重新布局', '调整储位', '调换储位', '重新摆放', '移动到', '换到'],
+  constraints: ['容量', '堆高', '层高', '载荷', '承重', '尺寸', '托盘', '不可用货位', '货位限制', '安全'],
+}
+
+function matchedTerms(text, terms) {
+  const upper = text.toUpperCase()
+  return terms.filter(term => upper.includes(term.toUpperCase()))
+}
+
+// A transparent teaching rubric. Keywords are evidence only; relationship points
+// require the student to connect demand, distance and an action in natural text.
+export function analyzeReflection(text) {
+  const normalized = String(text ?? '').trim().replace(/\s+/g, '')
+  const chars = countChars(normalized)
+  const matched = Object.fromEntries(Object.entries(REFLECTION_TERMS).map(([name, terms]) => [name, matchedTerms(normalized, terms)]))
+  const length = chars >= 40 ? 2 : chars >= 20 ? 1 : 0
+  const demandEvidence = matched.demand.length > 0
+  const distanceEvidence = matched.distance.length > 0
+  const priorityRelation = demandEvidence && distanceEvidence && (/(高|大|A类|高频|热销).{0,12}(近|靠近|就近|优先|出库口)/i.test(normalized) || /(优先|靠近|就近).{0,12}(周转量|A类|高频|热销|出库口)/i.test(normalized))
+  const placementReason = Number(demandEvidence) + Number(distanceEvidence) + Number(priorityRelation)
+  const changeRecognition = matched.change.length > 0 || /(订单结构|订单|需求|销量|周转量|频率|高频商品|热销商品).{0,6}(变化|改变|调整)/.test(normalized)
+  const recalculation = matched.recalculate.length > 0 || /(重新|再次|再).{0,6}(计算|核算|分类|划分).{0,5}(ABC|类别|周转量)?/i.test(normalized)
+  const relocation = matched.relocate.length > 0 || (changeRecognition && /(再|重新|相应|随之).{0,8}(摆放|储位|位置|布局|安排)/.test(normalized))
+  const adjustment = Number(changeRecognition) + Number(recalculation) + Number(relocation)
+  const constraints = matched.constraints.length > 0 ? 1 : 0
+  const causal = (placementReason > 0 || adjustment > 0) && /(因为|所以|因此|根据|依据|从而|以便|为了|如果|变化后|再按|优先)/.test(normalized) ? 1 : 0
+  const score = length + placementReason + adjustment + constraints + causal
+  const missing = []
+  if (!demandEvidence) missing.push('说明周转量、ABC类别或订单频率依据')
+  if (!distanceEvidence) missing.push('说明与出库口、拣货距离或作业成本的关系')
+  if (!changeRecognition) missing.push('明确订单或需求发生了什么变化')
+  if (!recalculation) missing.push('说明变化后重新计算或分类')
+  if (!relocation) missing.push('说明按新结果重新分配储位')
+  if (!constraints) missing.push('说明容量、堆高、载荷等约束')
+  return { chars, score, maxScore: 10, achieved: score >= 6, breakdown: { length, placementReason, adjustment, constraints, causal }, matched, missing }
+}
+
 export function reflectionScore(text) {
-  const n = countChars(text)
-  return n >= 30 ? 10 : n >= 10 ? 5 : 0
+  return analyzeReflection(text).score
+}
+
+function reflectionFeedback(analysis, weightedScore) {
+  const b = analysis.breakdown
+  const missing = analysis.missing.length ? `；可补充：${analysis.missing.slice(0, 2).join('、')}` : ''
+  return `反思原始 ${analysis.score}/10（篇幅${b.length}/2、摆放依据${b.placementReason}/3、变化调整${b.adjustment}/3、约束${b.constraints}/1、因果表达${b.causal}/1），折算 ${weightedScore} 分${missing}`
 }
 
 function pct(x) {
@@ -213,9 +260,10 @@ export function scoreSubmission(scenario, answer, context = {}) {
     const abcCorrect = scenario.products.filter(p => answer.abcAnswers[p.sku] === classes[p.sku]).length
     const document = reviewDocument(answer.placement, scenario, context, answer.review)
     const review = scoreReview(answer.review.marks, document.errorCells, scenario.documentReview, w.documentReview)
-    const scores = { abc: round1(abcCorrect / scenario.products.length * w.abc), placementValidity: w.placementValidity, placementEfficiency: round1(Math.min(1, Math.max(0, metrics.improvement) / scenario.fullScoreImprovement) * w.placementEfficiency), documentReview: review.score, reflection: round1(reflectionScore(answer.reflection) / 10 * w.reflection) }
+    const reflectionAnalysis = analyzeReflection(answer.reflection)
+    const scores = { abc: round1(abcCorrect / scenario.products.length * w.abc), placementValidity: w.placementValidity, placementEfficiency: round1(Math.min(1, Math.max(0, metrics.improvement) / scenario.fullScoreImprovement) * w.placementEfficiency), documentReview: review.score, reflection: round1(reflectionAnalysis.score / 10 * w.reflection) }
     scores.total = round1(Object.values(scores).reduce((a, b) => a + b, 0))
-    return { scores, scoreMax: w, metrics: { ...metrics, abcCorrect, abcTotal: scenario.products.length, reflectionChars: countChars(answer.reflection), placementValid: true, slotCapacityErrors: [] }, review: { ...review, document, marks: answer.review.marks }, feedback: { abc: `分类正确 ${abcCorrect}/${scenario.products.length}`, placementValidity: '全部商品货位合法、唯一且容量足够', placementEfficiency: `模拟成本改善 ${pct(metrics.improvement)}，满分线 ${pct(scenario.fullScoreImprovement)}`, documentReview: `命中 ${review.correctMarks}，误标 ${review.wrongMarks}，漏标 ${review.missedMarks}`, reflection: '30字以上满分，10～29字半分；教师另行阅读内容' } }
+    return { scores, scoreMax: w, metrics: { ...metrics, abcCorrect, abcTotal: scenario.products.length, reflectionChars: reflectionAnalysis.chars, reflectionAnalysis, placementValid: true, slotCapacityErrors: [] }, review: { ...review, document, marks: answer.review.marks }, feedback: { abc: `分类正确 ${abcCorrect}/${scenario.products.length}`, placementValidity: '全部商品货位合法、唯一且容量足够', placementEfficiency: `模拟成本改善 ${pct(metrics.improvement)}，满分线 ${pct(scenario.fullScoreImprovement)}`, documentReview: `命中 ${review.correctMarks}，误标 ${review.wrongMarks}，漏标 ${review.missedMarks}`, reflection: reflectionFeedback(reflectionAnalysis, scores.reflection) } }
   }
   const { classes } = classifyAbc(scenario.products, scenario.thresholds)
   const total = scenario.products.length
@@ -226,8 +274,9 @@ export function scoreSubmission(scenario, answer, context = {}) {
   const ratio = Math.min(Math.max(metrics.improvement, 0) / scenario.fullScoreImprovement, 1)
   const layout = round1(ratio * SCORE_MAX.layout)
 
-  const chars = countChars(answer.reflection)
-  const reflection = reflectionScore(answer.reflection)
+  const reflectionAnalysis = analyzeReflection(answer.reflection)
+  const chars = reflectionAnalysis.chars
+  const reflection = reflectionAnalysis.score
 
   const full = pct(scenario.fullScoreImprovement)
   let layoutText
@@ -237,11 +286,11 @@ export function scoreSubmission(scenario, answer, context = {}) {
 
   return {
     scores: { abc, layout, reflection, total: round1(abc + layout + reflection) },
-    metrics: { abcCorrect: correct, abcTotal: total, ...metrics, reflectionChars: chars },
+    metrics: { abcCorrect: correct, abcTotal: total, ...metrics, reflectionChars: chars, reflectionAnalysis },
     feedback: {
       abc: `分类正确 ${correct}/${total}，得 ${abc} 分`,
       layout: layoutText,
-      reflection: `反思 ${chars} 字，得 ${reflection} 分（30 字以上满分，10～29 字得 5 分）`,
+      reflection: reflectionFeedback(reflectionAnalysis, reflection),
     },
   }
 }

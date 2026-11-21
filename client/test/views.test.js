@@ -37,3 +37,21 @@ test('v3页面渲染：开始、ABC、48位地图、审核单与提交摘要', a
     }
   } finally {await vite.close();if(original)Object.defineProperty(globalThis,'localStorage',original);else delete globalThis.localStorage}
 })
+
+test('教学统计渲染：无轮次、空轮次、图表和反思安全输出', async () => {
+  const vite = await createServer({ configFile: new URL('../vite.config.js', import.meta.url).pathname, server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { default: Page } = await vite.ssrLoadModule('/client/src/components/TeachingStatistics.vue')
+    const { roundStatistics } = await import('../../server/src/statistics.js')
+    const scenario = JSON.parse(fs.readFileSync(new URL('../../server/data/default-scenario.json', import.meta.url)))
+    const render = stats => renderToString(createSSRApp(Page, { stats }))
+    assert.match(await render(null), /还没有开始实训/)
+    assert.match(await render(roundStatistics({ id: 'r', scenario }, [])), /本轮暂无提交/)
+    const stats = roundStatistics({ id: 'r', scenario }, [{ id: 's', studentId: '01', studentName: '学生', answer: { abcAnswers: classifyAbc(scenario.products, scenario.thresholds).classes, reflection: '<script>alert(1)</script>' }, result: { scores: { total: 50 }, metrics: { improvement: -0.1, baselineCost: 100, currentCost: 110 } } }])
+    const html = await render(stats)
+    for (const text of ['任务完成与达成情况', '各商品分类错误率', '储位优化改善率分布', '单据审核', '无参与数据', '-10.0%', '&lt;script&gt;', 'statistics.csv']) assert.ok(html.includes(text), text)
+    assert.ok(!html.includes('<script>alert'))
+    // Compile the parent page too, including its new tab and event bindings.
+    await vite.ssrLoadModule('/client/src/pages/TeacherPage.vue')
+  } finally { await vite.close() }
+})

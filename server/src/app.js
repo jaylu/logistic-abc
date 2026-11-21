@@ -5,7 +5,8 @@ import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import express from 'express'
 import { createAuth, sameOrigin } from './auth.js'
-import { submissionsCsv } from './csv.js'
+import { submissionsCsv, statisticsCsv } from './csv.js'
+import { roundStatistics } from './statistics.js'
 import { classifyAbc, countChars, parseMap, REFLECTION_MAX_CHARS, scoreSubmission } from './calc.js'
 import { describeScenario, normalizeScenario, placementErrors, validateScenario } from './scenario.js'
 
@@ -189,6 +190,18 @@ export function createApp({ db, scenarios, password, publicDir, log = console })
     const round = requireRound()
     if (!db.deleteSubmission(req.params.id, round.id)) throw new HttpError(404, 'NOT_FOUND', '找不到该提交')
     res.json({ ok: true })
+  })
+
+  teacher.get('/statistics', (req, res) => {
+    const round = db.activeRound()
+    res.json({ statistics: round ? roundStatistics(round, db.listSubmissions(round.id)) : null })
+  })
+
+  teacher.get('/statistics.csv', (req, res) => {
+    const round = requireRound()
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+    res.setHeader('Content-Disposition', `attachment; filename="abc-statistics-${round.id.slice(0, 6)}.csv"`)
+    res.send(statisticsCsv(roundStatistics(round, db.listSubmissions(round.id))))
   })
 
   teacher.get('/export.csv', (req, res) => {
