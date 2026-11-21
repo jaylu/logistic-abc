@@ -110,3 +110,31 @@ test('不可用货位配置：默认16位、校验拒绝占用、最优解仅使
   assert.match(validateScenario(full).join(),/可用货位数少于/)
   assert.throws(()=>bestPlacement(full),/少于商品/)
 })
+
+test('货架拖动：空位移动、占用位交换、失败时保留双方原位', async () => {
+  const {moveProduct}=await import('../src/warehouse.js')
+  const original={...scenario.baselinePlacement}, snapshot={...original}
+  const moved=moveProduct(original,'P09','01101102',scenario)
+  assert.deepEqual(moved.errors,[])
+  assert.equal(moved.placement.P09,'01101102')
+  assert.ok(!Object.values(moved.placement).includes(original.P09))
+  const swap=moveProduct(original,'P09',original.P01,scenario)
+  assert.equal(swap.swappedSku,'P01')
+  assert.equal(swap.placement.P09,original.P01)
+  assert.equal(swap.placement.P01,original.P09)
+  assert.deepEqual(original,snapshot)
+  const blocked=Object.keys(scenario.warehouse.disabledLocations)[0]
+  assert.ok(moveProduct(original,'P09',blocked,scenario).errors.length)
+  assert.ok(moveProduct(original,'P09','invalid',scenario).errors.length)
+  assert.ok(moveProduct(original,'UNKNOWN',original.P01,scenario).errors.length)
+  // P07 has 350mm cartons: eight fit on level 1, only four on level 3.
+  // P09 can move to P07's level 1, but P07 cannot move back to P09's level 3.
+  const restricted=structuredClone(scenario)
+  restricted.products.find(p=>p.sku==='P07').stockCartons=8
+  const placement={...original,P07:'01201102'}
+  const invalidSwap=moveProduct(placement,'P09',placement.P07,restricted)
+  assert.match(invalidSwap.errors.join(),/P07/)
+  assert.equal(invalidSwap.placement,undefined)
+  assert.equal(placement.P09,original.P09)
+  assert.equal(placement.P07,'01201102')
+})

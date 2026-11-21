@@ -49,6 +49,16 @@ export function validatePlacement(placement, scenario) {
   }
   return errors
 }
+// Build and validate the whole move before committing either side of a swap.
+export function moveProduct(placement, sku, target, scenario) {
+  if (!scenario.products.some(p => p.sku === sku)) return { errors: ['请选择有效商品'] }
+  const previous = placement[sku]
+  const other = Object.keys(placement).find(key => key !== sku && placement[key] === target)
+  const next = { ...placement, [sku]: target }
+  if (other) next[other] = previous
+  const errors = validatePlacement(next, scenario)
+  return errors.length ? { errors } : { errors: [], placement: next, swappedSku: other }
+}
 export function locationCost(code, scenario) {
   const v = decodeLocation(code)
   if (!isValidLocation(code, scenario)) return NaN
